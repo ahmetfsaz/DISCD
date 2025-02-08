@@ -1,0 +1,40 @@
+{"FOL": "∀x (Practices(x, Guitar) ∨ Practices(x, Piano) → Practices(x, Music))", "NL": "Anyone who plays guitar or piano practices music."}
+{"FOL": "∀x (Practices(x, Hiking) → Likes(x, Nature))", "NL": "Anyone who hikes likes nature."}
+{"FOL": "∀x (Attends(x, Cambridge) → LivesIn(x, London) ∨ LivesIn(x, Cambridge))", "NL": "Students of Cambridge live in London or Cambridge."}
+{"FOL": "Practices(Laura, Piano) ∧ Practices(Laura, Music)", "NL": "Laura practices piano and thus practices music."}
+{"FOL": "∀x (Practices(x, Photography) ∧ Likes(x, Nature) → Practices(x, NaturePhotography))", "NL": "Those who like nature and practice photography engage in nature photography."}
+{"FOL": "∀x (HasPet(x, Cat) → LikesCats(x))", "NL": "Anyone who has a cat likes cats."}
+{"FOL": "∀x (WorksAs(x, Doctor) → PracticesMedicine(x))", "NL": "Doctors practice medicine."}
+{"FOL": "∀x (IsMarriedTo(x, y) → LivesTogether(x, y))", "NL": "Married couples live together."}
+{"FOL": "IsMarriedTo(Robert, Laura) ∧ LivesIn(Robert, London) ∧ LivesIn(Laura, London)", "NL": "Robert and Laura are married and live in London."}
+{"FOL": "∀x (Speaks(x, English) → StudiesCommunication(x))", "NL": "English speakers study communication."}
+{"FOL": "∀x (LivesIn(x, y) → Likes(x, y))", "NL": "People like the places they live in."}
+{"FOL": "∀x (IsFriendOf(x, y) → LikesEachOther(x, y))", "NL": "Friends like each other."}
+{"FOL": "IsFriendOf(Sophia, Laura) ∧ Practices(Laura, Piano)", "NL": "Sophia is friends with Laura, who practices piano."}
+{"FOL": "OwnsVehicle(Michael, Car) ∧ Drives(Michael, Car)", "NL": "Michael owns and drives a car."}
+{"FOL": "Practices(Michael, Soccer) ∧ Likes(Michael, Sports)", "NL": "Michael practices soccer and likes sports."}
+{"FOL": "Practices(Daniel, Programming) ∧ Likes(Daniel, Technology)", "NL": "Daniel practices programming and likes technology."}
+{"FOL": "LivesIn(Berlin, Germany)", "NL": "Berlin is in Germany."}
+{"FOL": "∀x (HasPet(x, y) → Likes(x, y))", "NL": "If someone has pet y, they like y."}
+{"FOL": "∀x (Speaks(x, French) → LikesFrenchCulture(x))", "NL": "French speakers like French culture."}
+{"FOL": "∀x (Eats(x, y) → Likes(x, y))", "NL": "Anyone who eats y likes y."}
+{"FOL": "Speaks(Michael, English) ∧ Likes(Michael, Technology)", "NL": "Michael speaks English and likes technology."}
+{"FOL": "Studies(Daniel, ComputerScience) ∧ Practices(Daniel, Programming)", "NL": "Daniel studies computer science and practices programming."}
+{"FOL": "Speaks(Laura, English) ∧ LivesIn(Laura, London)", "NL": "Laura speaks English and lives in London."}
+{"FOL": "∀x (WorksAs(x, Teacher) → LikesTeaching(x))", "NL": "Teachers like teaching."}
+{"FOL": "∀x (Practices(x, Cooking) → LikesFood(x))", "NL": "Anyone who practices cooking likes food."}
+{"FOL": "∀x (Practices(x, Soccer) → LikesSports(x))", "NL": "Anyone who practices soccer likes sports."}
+{"FOL": "∀x (Speaks(x, French) → LikesFrenchCuisine(x))", "NL": "Anyone who speaks French likes French cuisine."}
+{"FOL": "∀x (Likes(x, ItalianFood) → EatsPasta(x))", "NL": "Anyone who likes Italian food eats pasta."}
+{"FOL": "∀x (Likes(x, Sports) → LikesFitness(x))", "NL": "Anyone who likes sports likes fitness."}
+{"FOL": "∀x (Studies(x, y) → AppliesKnowledge(x, y))", "NL": "Anyone who studies y applies their knowledge in y."}
+{"FOL": "∀x (Speaks(x, y) → AppreciatesLanguage(x, y))", "NL": "Anyone who speaks y appreciates y."}
+{"FOL": "∀x (Practices(x, y) → GainsExperience(x, y))", "NL": "Anyone who practices y gains experience in y."}
+{"FOL": "∀x (IsFriendOf(x, y) → ProvidesSupport(x, y))", "NL": "Friends provide support to each other."}
+{"FOL": "∀x (Likes(x, y) → EnhancesWellBeing(x, y))", "NL": "Anyone who likes y enhances their well-being with y."}
+{"FOL": "∀x (Likes(x, Sports) → WatchesSports(x))", "NL": "Anyone who likes sports watches sports."}
+{"FOL": "∀x (Likes(x, ItalianFood) → EatsPizza(x))", "NL": "Anyone who likes Italian food eats pizza."}
+{"FOL": "∀x (OwnsVehicle(x, y) → UsesVehicle(x, y))", "NL": "Anyone who owns a vehicle uses it."}
+{"FOL": "∀x (Likes(x, y) → SeeksOut(x, y))", "NL": "Anyone who likes y seeks it out."}
+{"FOL": "∀x (IsParentOf(x, y) → Teaches(x, y))", "NL": "Parents teach their children."}
+{"FOL": "∀x (OwnsVehicle(x, y) → MaintainsVehicle(x, y))", "NL": "Anyone who owns a vehicle maintains it."}
