@@ -1,66 +1,81 @@
+"""
+Huffman coding baseline for the WCNC experiments.
+
+Compresses the natural-language premises of each FOLIO story with a per-story
+Huffman code and reports the resulting bit cost. This is the classical
+compression baseline the semantic scheme is measured against: it exploits
+character redundancy but has no notion of which logical content a message
+carries, so it cannot trade bits against meaning.
+
+Emits one [story_index, compressed_bits] pair per story.
+"""
+
 import pandas as pd
 from dahuffman import HuffmanCodec
 
-def read_stories(dataframe):
-    ids, story_arr = [], []
-    for ix in range(len(dataframe)):
-        if dataframe['story_id'][ix] in ids:
+# ── Configuration ────────────────────────────────────────────────────────────
+DATA_PATH = "folio-train.jsonl"
+MIN_PREMISES = 7      # stories shorter than this are skipped
+BITS_PER_BYTE = 8
+
+
+def load_stories(path, min_premises=MIN_PREMISES):
+    """Return the premises of each sufficiently long FOLIO story.
+
+    FOLIO pairs one set of premises with several conclusions, so the same story
+    appears in multiple records. Records are deduplicated by `story_id`, and
+    stories with fewer than `min_premises` premises are dropped.
+    """
+    frame = pd.read_json(path, lines=True)
+    stories, seen = [], set()
+
+    for index in range(len(frame)):
+        story_id = frame["story_id"][index]
+        if story_id in seen:
             continue
-        else:
-            story_arr.append(dataframe['premises'][ix])
-        ids.append(dataframe['story_id'][ix])
+        seen.add(story_id)
 
-    return story_arr, ids
+        premises = frame["premises"][index]
+        if len(premises) >= min_premises:
+            stories.append(premises)
 
-if __name__ == '__main__':
+    return stories
 
-    file_path = 'folio-train.jsonl'
-    df_f = pd.read_json(file_path, lines=True)
 
-    # As FOLIO dataset is a logical reasoning dataset, there exists multiple examples with the same story (i.e.,
-    # same premises) but with different conclusions. Check story_id & skip if a particular story is already included,
-    # append all others to a separate list.
-    stories, story_ids = read_stories(dataframe=df_f)
+def compressed_bits(text):
+    """Huffman-code `text` and return its size in bits.
 
-    stories_new = []
+    The codebook itself is not counted, only the encoded payload, so this is a
+    lower bound on what an actual transmission would cost.
+    """
+    codec = HuffmanCodec.from_data(text)
+    encoded = codec.encode(text)
 
-    for element in stories:
-        if len(element) > 6:
-            stories_new.append(element)
+    if codec.decode(encoded) != text:
+        raise ValueError("Huffman round-trip did not reproduce the input")
 
-    stories = stories_new
+    return len(encoded) * BITS_PER_BYTE
 
-    ids = 0
-    bit_array = []
-    for story in stories:
 
-        text = " ".join(story)
+def main():
+    stories = load_stories(DATA_PATH)
+    print(f"{len(stories)} stories with at least {MIN_PREMISES} premises\n")
 
-        codec = HuffmanCodec.from_data(text)
+    bit_costs = []
+    for index, premises in enumerate(stories):
+        text = " ".join(premises)
+        original = len(text) * BITS_PER_BYTE
+        compressed = compressed_bits(text)
 
-        # Step 1: Encode the text using Huffman encoding
-        encoded_text = codec.encode(text)
-        print(f"Encoded Text: {encoded_text}")
+        print(
+            f"Story {index:>2}: {original:>6} -> {compressed:>5} bits "
+            f"(ratio {original / compressed:.2f})"
+        )
+        bit_costs.append([index, compressed])
 
-        # Step 2: Calculate the original bit size
-        # Assume each character in the original text is represented using 8 bits (ASCII encoding)
-        original_bit_size = len(text) * 8
-        print(f"Original Bit Size: {original_bit_size} bits")
+    print("\nCompressed bits per story:")
+    print(bit_costs)
 
-        # Step 3: Calculate the compressed bit size
-        # The compressed bit size is simply the length of the encoded text (binary string)
-        compressed_bit_size = len(encoded_text) * 8
-        print(f"Compressed Bit Size: {compressed_bit_size} bits")
 
-        # Step 4: Calculate the compression ratio
-        compression_ratio = original_bit_size / compressed_bit_size
-        print(f"Compression Ratio: {compression_ratio:.2f}")
-
-        # Step 5: Decode the text (to verify correctness)
-        decoded_text = codec.decode(encoded_text)
-        print(f"Decoded Text: {decoded_text}")
-
-        bit_array.append([ids, compressed_bit_size])
-        ids = ids + 1
-
-    print(bit_array)
+if __name__ == "__main__":
+    main()
