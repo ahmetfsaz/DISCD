@@ -1,4 +1,4 @@
- {"FOL": "IsGrandparentOf(Maria, Daniel)", "NL": "Maria is Daniel's grandparent."}
+{"FOL": "IsGrandparentOf(Maria, Daniel)", "NL": "Maria is Daniel's grandparent."}
 {"FOL": "∀x ∀y (IsMarriedTo(x, y) → IsFriendOf(x, y))", "NL": "Married couples are friends."}
 {"FOL": "∀x (Speaks(x, English) ∧ LivesIn(x, y) → LikesCommunication(x, English))", "NL": "English speakers in any location like to communicate in English."}
 {"FOL": "∀x (IsParentOf(x, y) ∧ IsFriendOf(x, z) → IsFriendOf(y, z))", "NL": "Parents' friends are friends of their children."}

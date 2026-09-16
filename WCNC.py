@@ -9,29 +9,47 @@ from decimal import Decimal
 from functools import reduce
 
 Predicates = ['LivesIn', 'WorksAs', 'OwnsVehicle', 'Practices', 'IsParentOf', 'Attends', 'Eats', 'IsFriendOf', 'IsMarriedTo', 'Speaks', 'Drives', 'Likes', 'IsSiblingOf', 'HasPet', 'Studies']
+
 Entities = ['John', 'Emma', 'Michael', 'Sophia', 'David', 'Olivia', 'Engineer', 'Doctor', 'Teacher', 'NewYork', 'London', 'Paris', 'Guitar', 'Piano', 'Chess', 'Harvard', 'Cambridge', 'Oxford', 'Pizza', 'Sushi', 'Car', 'Bicycle', 'Train', 'English', 'French', 'Spanish', 'Maria', 'Robert', 'Daniel', 'Laura', 'Hiking', 'Cooking', 'Photography', 'Cat', 'Dog', 'Italian', 'Chef', 'German', 'Berlin', 'Soccer']
 
+
 def read_stories(dataframe):
-    ids, story_arr = [0], []
+    ids, story_arr = [], []
     for ix in range(len(dataframe)):
-        story_arr.append(dataframe['FOL'][ix])
+        if dataframe['story_id'][ix] in ids:
+            continue
+        else:
+            story_arr.append(dataframe['premises-FOL'][ix])
+        ids.append(dataframe['story_id'][ix])
 
     return story_arr, ids
 
 def flatten_stories(story_arr):
     flat_arr = []
-    next_story = story_arr
-    next_FOL = []
-    there_exists_flag = []
-    grounded_entity, variable_entity = get_all_entities(next_story)
-    for j in range(len(next_story)):
-        fol_expression = next_story[j]
-        if contains_quantifiers(fol_expression):
-            if not contains_both_quantifiers(fol_expression):
-                if contains_forall(fol_expression):
-                    next_FOL.append(fol_expression)
-                    there_exists_flag.append(False)
+    for i in range(len(story_arr)):
+        next_story = story_arr[i]
+        next_FOL = []
+        there_exists_flag = []
+        grounded_entity, variable_entity = get_all_entities(next_story)
+        for j in range(len(next_story)):
+            fol_expression = next_story[j]
+            if contains_quantifiers(fol_expression):
+                if not contains_both_quantifiers(fol_expression):
+                    if contains_forall(fol_expression):
+                        next_FOL.append(fol_expression)
+                        there_exists_flag.append(False)
+                    else:
+                        num_q = sum(fol_expression.count(quantifier) for quantifier in ['∃'])
+                        if num_q % 2 == 1:
+                            #fol_expression = str('¬(') + fol_expression + str(')')
+                            there_exists_flag.append(True)
+                        else:
+                            there_exists_flag.append(False)
+                        fol_expression = fol_expression.replace('∃', '∀')
+                        next_FOL.append(fol_expression)
                 else:
+                    # Count the number of ∃ and replace them with ∀.
+                    # If the number of ∃ is odd, put a negation sign at the beginning, and set rev_prob to True.
                     num_q = sum(fol_expression.count(quantifier) for quantifier in ['∃'])
                     if num_q % 2 == 1:
                         #fol_expression = str('¬(') + fol_expression + str(')')
@@ -41,20 +59,9 @@ def flatten_stories(story_arr):
                     fol_expression = fol_expression.replace('∃', '∀')
                     next_FOL.append(fol_expression)
             else:
-                # Count the number of ∃ and replace them with ∀.
-                # If the number of ∃ is odd, put a negation sign at the beginning, and set rev_prob to True.
-                num_q = sum(fol_expression.count(quantifier) for quantifier in ['∃'])
-                if num_q % 2 == 1:
-                    #fol_expression = str('¬(') + fol_expression + str(')')
-                    there_exists_flag.append(True)
-                else:
-                    there_exists_flag.append(False)
-                fol_expression = fol_expression.replace('∃', '∀')
                 next_FOL.append(fol_expression)
-        else:
-            next_FOL.append(fol_expression)
-            there_exists_flag.append(False)
-    flat_arr.append([next_FOL, grounded_entity, variable_entity, there_exists_flag])
+                there_exists_flag.append(False)
+        flat_arr.append([next_FOL, grounded_entity, variable_entity, there_exists_flag])
     return flat_arr
 
 def unique_elements(story_arr):
@@ -63,28 +70,25 @@ def unique_elements(story_arr):
     unique_grounded_entities = set()
     unique_variable_entities = set()
     enums_per_story = []
-    next_story = story_arr
-    predicates_tmp = set()
-    entities_tmp = set()
-    for j in range(len(next_story)):
-        fol_expression = next_story[j]
-        tree = parse_text_FOL_to_tree(fol_expression)
-        if tree is not None:
-            predicates = extract_predicates_from_tree(tree)
-            unique_predicates.update(predicates)
-            predicates_tmp.update(predicates)
-            grounded_entities = extract_grounded_entities_from_tree(tree)
-            unique_grounded_entities.update(grounded_entities)
-            entities_tmp.update(grounded_entities)
-            variable_entities = extract_variable_entities_from_tree(tree)
-            unique_variable_entities.update(variable_entities)
-    unique_predicates.update(Predicates)
-    unique_grounded_entities.update(Entities)
-    unique_variable_entities.update(['x', 'y', 'z'])
-
-    num_p = len(list(unique_predicates))
-    num_e = len(list(unique_grounded_entities))
-    enums_per_story.append(num_p * num_e * num_e)
+    for index in range(len(story_arr)):
+        next_story = story_arr[index]
+        predicates_tmp = set()
+        entities_tmp = set()
+        for j in range(len(next_story)):
+            fol_expression = next_story[j]
+            tree = parse_text_FOL_to_tree(fol_expression)
+            if tree is not None:
+                predicates = extract_predicates_from_tree(tree)
+                unique_predicates.update(predicates)
+                predicates_tmp.update(predicates)
+                grounded_entities = extract_grounded_entities_from_tree(tree)
+                unique_grounded_entities.update(grounded_entities)
+                entities_tmp.update(grounded_entities)
+                variable_entities = extract_variable_entities_from_tree(tree)
+                unique_variable_entities.update(variable_entities)
+        num_p = len(list(predicates_tmp))
+        num_e = len(list(entities_tmp))
+        enums_per_story.append(num_p * num_e * num_e)
 
     # Convert the set to a list
     unique_predicates = sorted(list(unique_predicates))
@@ -145,7 +149,7 @@ def script_for_ubuntu(story_id, permn):
     write_a_file(story_id, permn, full_path)
 
 def get_tokens(story_id, permn, last_tokens, var_len, enum, thereex, fols):
-    file_path = f"dimac_cnfs_res\\output_{story_id}_{permn}.txt"
+    file_path = f"WCNC/dimac_cnfs_res\\output_{story_id}_{permn}.txt"
     # Open the file and read it line by line
     with open(file_path, 'r') as file:
         tokens = []
@@ -172,8 +176,8 @@ def move_txt():
     #Move .txt files to another directory.
 
     # Define the source and destination directories
-    source_dir = "dimac_cnfs"
-    destination_dir = "dimac_cnfs_res"
+    source_dir = "WCNC/dimac_cnfs"
+    destination_dir = "WCNC/dimac_cnfs_res"
 
     # Ensure the destination directory exists
     if not os.path.exists(destination_dir):
@@ -401,7 +405,7 @@ def calc_inductive_probs_random(last_tokens):
 
 if __name__ == '__main__':
 
-    file_path = 'Dataset/User1.jsonl'
+    file_path = 'folio-train.jsonl'
     df_f = pd.read_json(file_path, lines=True)
 
     # As FOLIO dataset is a logical reasoning dataset, there exists multiple examples with the same story (i.e.,
@@ -409,9 +413,19 @@ if __name__ == '__main__':
     # append all others to a separate list.
     stories, story_ids = read_stories(dataframe=df_f)
 
+    stories_new = []
+
+    for element in stories:
+        if len(element) > 6:
+            stories_new.append(element)
+
+
+    stories = stories_new
+
     # Extract all FOL sentences from the stories list into a flat list. Then, eliminate all with multiple quantifiers
     # as the code needs to be implemented before their inclusion.
     story_flat = flatten_stories(story_arr=stories)
+
 
     unique_predicates, unique_grounded_entities, unique_variable_entities, num_enum, enums_per_story = unique_elements(story_arr=stories)
 
@@ -448,7 +462,7 @@ if __name__ == '__main__':
         if selected_elements is not None:
             permn = 0 #99
             tmp_exists = 0
-            for iteration in range(1, 2): #range(len(selected_elements), len(selected_elements)+1):
+            for iteration in range(1, 4): #range(len(selected_elements), len(selected_elements)+1):
                 comb = combinations(range(len(selected_elements)), iteration)
                 for index in list(comb):
                     combin = []
@@ -462,6 +476,7 @@ if __name__ == '__main__':
                         fols.append(selected_fol[indexy])
 
                     variables = list(set(sum(combin, [])))
+
                     selected_dimacs = []
                     selected_clauses = []
 
@@ -474,18 +489,17 @@ if __name__ == '__main__':
                         if selected_clauses[jj] is None:
                             selected_clauses[jj] = []
 
-                    num_elem = len(list(sum(selected_clauses, [])))
-                    write_dimacs_to_file_ubuntu(selected_clauses, story_id, permn, num_elem, len(variables))
-                    script_for_ubuntu(story_id=story_id, permn=permn)
+                    #num_elem = len(list(sum(selected_clauses, [])))
+                    #write_dimacs_to_file_ubuntu(selected_clauses, story_id, permn, num_elem, len(variables))
+                    #script_for_ubuntu(story_id=story_id, permn=permn)
 
-                    last_tokens = get_tokens(story_id=story_id, permn=permn, last_tokens=last_tokens, var_len=len(variables), enum=enums_per_story[story_id], thereex=rev_p_t, fols=fols)
+                    last_tokens = get_tokens(story_id=story_id, permn=permn, last_tokens=last_tokens, var_len=len(variables), enum=enums_per_story[story_id], thereex=rev_p_t, fols =fols)
                     permn += 1
         story_id += 1
 
-    sys.exit()
     #for i in range(len(last_tokens)):
         #print(last_tokens[i])
-    move_txt()
+    #move_txt()
     calc_inductive_probs(last_tokens)
     #calc_inductive_probs_random(last_tokens)
 
