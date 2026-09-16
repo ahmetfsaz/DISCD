@@ -1,4 +1,4 @@
-# DISCD
+# DISCD: Distributed Lossy Semantic Communication for Logical Deduction of Hypothesis
 
 Code and dataset for:
 
