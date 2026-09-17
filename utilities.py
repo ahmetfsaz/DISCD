@@ -358,13 +358,3 @@ def num_quantifiers(fol_expression):
     else:  # both and-or
         return count_quantifiers(fol_expression), contains_thereexists(fol_expression), contains_forall(fol_expression), 'BC'
 
-
-# URL of the dataset (you need to replace this with the actual URL of the JSONL file)
-'''malls_train = "MALLS-v0.1-train.json"
-malls_validation = "MALLS-v0.1-test.json"
-
-malls_t = read_jsonl_file(malls_train)[0]
-malls_v = read_jsonl_file(malls_validation)[0]
-
-df_mt = pd.DataFrame(data=malls_t)
-df_mv = pd.DataFrame(data=malls_v)'''
