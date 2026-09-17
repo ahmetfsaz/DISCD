@@ -1,387 +1,197 @@
-# Python3 program to for tree traversals
-# A class that represents an individual node in a
-# Binary Tree
-import sys
-import copy
+"""
+Binary-tree utilities for tracking sentence combinations during model counting.
+
+Nothing in this module is imported by name anywhere in the repository — every
+script pulls it in with `from bin_tree import *` and calls none of its
+functions. It looks like scaffolding from an earlier approach to selecting
+which sentences overlap, superseded by the DIMACS/model-counting pipeline in
+fol_parser.py. Recommended action: delete this file and drop the `bin_tree`
+import from ICMLCN.py and WCNC.py. This cleaned version is kept only in case
+something outside this repo still depends on it; if not, remove it.
+"""
 
 class Node:
-   def __init__(self, depth, id,  parent=None):
-      self.left = None
-      self.right = None
-      self.parent = parent
-      self.depth = depth
-      self.id = id
+    """A node in the tree, holding which sentence combination it represents."""
+
+    def __init__(self, depth, id, parent=None):
+        self.left = None
+        self.right = None
+        self.parent = parent
+        self.depth = depth
+        self.id = id
+
 
 def find_first_overlap(large_list, small_list):
-    # Length of the smaller list to compare sublists of the same size
+    """Return the first sublist of `large_list` whose prefix contains `small_list`.
+
+    Compares every position of `small_list` against every contiguous window of
+    each sublist's prefix (all but its last element), and returns the first
+    sublist where a window matches.
+    """
     small_len = len(small_list)
-    # Loop through each sublist in the larger list
+
     for sublist in large_list:
-        # Extract the relevant part of the sublist (excluding the last element)
-        relevant_part = sublist[:-1]
+        prefix = sublist[:-1]
+        for i in range(len(prefix) - small_len + 1):
+            if prefix[i : i + small_len] == small_list:
+                return sublist
 
-        # Check each possible subsequence in the relevant part
-        for i in range(len(relevant_part) - small_len + 1):
-            # Compare the slice of the relevant part with the small list
-            if relevant_part[i:i + small_len] == small_list:
-                return sublist  # Return the first matching sublist
-
-    return None  # Return None if no matching sublist is found
-
-def insertAtLastLevel(root, id, my_dict, truth_t, arr, lenr):
-    h = lenr
-    insertCurrentLevel(root, h, h, id, my_dict, truth_t, arr)
+    return None
 
 
+def insert_at_last_level(root, id, assignment, truth_table, keys, depth):
+    """Insert a new node at the bottom of the tree, then prune by `truth_table`."""
+    insert_at_level(root, depth, depth, id, assignment, truth_table, keys)
 
-# Print nodes at a current level
-def insertCurrentLevel(root, level, depth, id, my_dict, truth_t, arr):
+
+def insert_at_level(root, level, depth, id, assignment, truth_table, keys):
+    """Recurse to `level`, add a node there, and mark branches ruled out by `truth_table`.
+
+    `assignment` maps node ids to a boolean path so far. At the target level, a
+    new left and right child are added for `id`; each is then checked against
+    `truth_table` under the combined assignment, and pruned (set to `False`)
+    if that combination cannot occur.
+    """
     if level == 1:
-        if root is not False:
-            if root.left is not False:
-                root.left = Node(depth, id, root)
+        if root is False:
+            return
 
-                my_dict[root.id], my_dict[id] = False, False
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                if result is not None:
-                    if result[-1] is False:
-                        root.left.left = False
+        if root.left is not False:
+            root.left = Node(depth, id, root)
+            for root_val, id_val, branch in (
+                (False, False, "left"),
+                (False, True, "right"),
+            ):
+                assignment[root.id], assignment[id] = root_val, id_val
+                values = [assignment[key] for key in keys if key in assignment]
+                result = find_first_overlap(truth_table, values)
+                if result is not None and result[-1] is False:
+                    setattr(root.left, branch, False)
 
-                my_dict[root.id], my_dict[id] = False, True
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                if result is not None:
-                    if result[-1] is False:
-                        root.left.right = False
-
-        if root is not False:
-            if root.right is not False:
-                root.right = Node(depth, id, root)
-
-                my_dict[root.id], my_dict[id] = True, False
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                if result is not None:
-                    if result[-1] is False:
-                        root.right.left = False
-
-
-                my_dict[root.id], my_dict[id] = True, True
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                if result is not None:
-                    if result[-1] is False:
-                        root.right.right = False
+        if root.right is not False:
+            root.right = Node(depth, id, root)
+            for root_val, id_val, branch in (
+                (True, False, "left"),
+                (True, True, "right"),
+            ):
+                assignment[root.id], assignment[id] = root_val, id_val
+                values = [assignment[key] for key in keys if key in assignment]
+                result = find_first_overlap(truth_table, values)
+                if result is not None and result[-1] is False:
+                    setattr(root.right, branch, False)
 
     elif level > 1:
-        if root is not False:
-            if root.left is not None:
-                my_dict[root.id] = False
-                insertCurrentLevel(root.left, level - 1, depth, id, my_dict, truth_t, arr)
-        if root is not False:
-            if root.right is not None:
-                my_dict[root.id] = True
-                insertCurrentLevel(root.right, level - 1, depth, id, my_dict, truth_t, arr)
+        if root is False:
+            return
+        if root.left is not None:
+            assignment[root.id] = False
+            insert_at_level(root.left, level - 1, depth, id, assignment, truth_table, keys)
+        if root.right is not None:
+            assignment[root.id] = True
+            insert_at_level(root.right, level - 1, depth, id, assignment, truth_table, keys)
 
 
-def deleteCurrentLevel(root, level, var_levels, path, currentLevel):
+def delete_at_level(root, level, var_levels, path, current_level):
+    """Prune the subtree at `level`, following `path` at each level in `var_levels`.
 
+    At levels not in `var_levels` both children are visited; at a level in
+    `var_levels`, only the branch `path` selects is visited.
+    """
     if level == 1:
         root.left = None
         root.right = None
         return
-    elif level > 1:
-        if currentLevel in var_levels:
-            inxx = var_levels.index(currentLevel)
-            if root.left is not None and path[inxx] == 0:
-                deleteCurrentLevel(root.left, level - 1,  var_levels, path, currentLevel+1)
-            if root.right is not None and path[inxx] == 1:
-                deleteCurrentLevel(root.right, level - 1, var_levels, path, currentLevel + 1)
-        else:
-            if root.left is not None:
-                deleteCurrentLevel(root.left, level - 1, var_levels, path, currentLevel + 1)
-            if root.right is not None:
-                deleteCurrentLevel(root.right, level - 1, var_levels, path, currentLevel + 1)
+
+    if level <= 1:
+        return
+
+    if current_level in var_levels:
+        index = var_levels.index(current_level)
+        if root.left is not None and path[index] == 0:
+            delete_at_level(root.left, level - 1, var_levels, path, current_level + 1)
+        if root.right is not None and path[index] == 1:
+            delete_at_level(root.right, level - 1, var_levels, path, current_level + 1)
+    else:
+        if root.left is not None:
+            delete_at_level(root.left, level - 1, var_levels, path, current_level + 1)
+        if root.right is not None:
+            delete_at_level(root.right, level - 1, var_levels, path, current_level + 1)
 
 
-def eliminateAtGivenLevel(root, id, repeated, path, vars):
+def eliminate_at_given_level(root, id, repeated, path, variables):
+    """Prune the subtree below `id`, following `path` at each variable's level."""
     level = repeated.index(id)
-    var_indexes = [repeated.index(indx) for indx in vars]
-    var_levels = [index for index in var_indexes]
-    currentLevel = 1
-    deleteCurrentLevel(root, level, var_levels, path, currentLevel)
+    var_levels = [repeated.index(v) for v in variables]
+    delete_at_level(root, level, var_levels, path, current_level=1)
 
 
-
-# Compute the height of a tree--the number of nodes
-# along the longest path from the root node down to
-# the farthest leaf node
 def height(node):
+    """Height of the tree: the number of nodes on its longest root-to-leaf path."""
     if node is None:
         return 0
-    else:
-        # Compute the height of each subtree
-        if node.left is False:
-            return 1
-        else:
-            lheight = height(node.left)
 
-        if node.right is False:
-            return 1
-        else:
-            rheight = height(node.right)
-
-        # Use the larger one
-        if lheight > rheight:
-            return lheight + 1
-        else:
-            return rheight + 1
+    left_height = 1 if node.left is False else height(node.left)
+    right_height = 1 if node.right is False else height(node.right)
+    return max(left_height, right_height) + 1
 
 
-
-def printInorder(root):
-	if root:
-		# First recur on left child
-		printInorder(root.left)
-		# Then print the id of node
-		print(root.id, end=" "),
-		# Now recur on right child
-		printInorder(root.right)
-
-
-# A function to do preorder tree traversal
-def printPreorder(root):
+def print_inorder(root):
     if root:
-        # First print the id of node
-        print(root.id, end=" "),
-        # Then recur on left child
-        printPreorder(root.left)
-        # Finally recur on right child
-        printPreorder(root.right)
+        print_inorder(root.left)
+        print(root.id, end=" ")
+        print_inorder(root.right)
 
 
-# A function to do postorder tree traversal
-def printPostorder(root):
+def print_preorder(root):
     if root:
-        # First recur on left child
-        printPostorder(root.left)
-        # The recur on right child
-        printPostorder(root.right)
-        # Now print the id of node
-        print(root.id, end=" "),
+        print(root.id, end=" ")
+        print_preorder(root.left)
+        print_preorder(root.right)
 
 
-# Function to  print level order traversal of tree
-def printLevelOrder(root, lng):
-    h = lng
-    for i in range(1, lng+1):
-        printCurrentLevel(root, i)
+def print_postorder(root):
+    if root:
+        print_postorder(root.left)
+        print_postorder(root.right)
+        print(root.id, end=" ")
 
-def printCurrentLevel(root, level):
-    if root is None:
-        return
-    if root is False:
+
+def print_level_order(root, num_levels):
+    """Print node ids level by level, from the root down to `num_levels`."""
+    for level in range(1, num_levels + 1):
+        print_level_at(root, level)
+
+
+def print_level_at(root, level):
+    if root is None or root is False:
         return
     if level == 1:
         print(root.id, end=" ")
     elif level > 1:
-        printCurrentLevel(root.left, level - 1)
-        printCurrentLevel(root.right, level - 1)
+        print_level_at(root.left, level - 1)
+        print_level_at(root.right, level - 1)
 
-def flip_the_index(selected_truth_t):
-    print(selected_truth_t)
-    print(selected_truth_t[0])
-    true_arr = []
-    false_arr = []
-    for elem in selected_truth_t:
-        count_t = 0
-        count_f = 0
-        for elem_2 in elem:
-            if elem_2[-1] == True:
-                count_t += 1
-            else:
-                count_f += 1
-        true_arr.append(count_t)
-        false_arr.append(count_f)
 
-    if sum(true_arr)/sum(false_arr) > 1:
-        for elem in selected_truth_t:
-            for elem_2 in elem:
-                if elem_2[-1] == True:
-                    elem_2[-1] = False
+def flip_majority_truth_value(truth_tables):
+    """Flip every truth value if True outnumbers False across all tables.
+
+    Balances a set of truth tables toward an equal split of True and False
+    outcomes, which model counting treats symmetrically either way.
+    """
+    def count_true_false(tables):
+        true_count = false_count = 0
+        for table in tables:
+            for row in table:
+                if row[-1] is True:
+                    true_count += 1
                 else:
-                    elem_2[-1] = True
+                    false_count += 1
+        return true_count, false_count
 
-    true_arr = []
-    false_arr = []
-    for elem in selected_truth_t:
-        count_t = 0
-        count_f = 0
-        for elem_2 in elem:
-            if elem_2[-1] == True:
-                count_t += 1
-            else:
-                count_f += 1
-        true_arr.append(count_t)
-        false_arr.append(count_f)
+    true_count, false_count = count_true_false(truth_tables)
+    if false_count and true_count / false_count > 1:
+        for table in truth_tables:
+            for row in table:
+                row[-1] = not row[-1]
 
-    print(sum(true_arr)/sum(false_arr))
-    return selected_truth_t
-
-
-'''
-def printLevelOrder(root, lng):
-    h = height(root) # or lng
-    for i in range(1, h + 4):
-        printCurrentLevel(root, i)
-'''
-
-'''
-def insertCurrentLevel2(root, level, depth, id, my_dict, truth_t):
-    print("LEVEL: ", level, "ID: ", id, "ROOT_ID: ", root.id)
-    if level == 1:
-        my_dict[root.id] = False
-        result = find_first_overlap(truth_t, list(my_dict.values()))
-        print("MY_DICT: ", my_dict)
-        print("RESULT: ", result)
-        if result is not None:
-            if result[-1] is True:
-                root.left = Node(depth, id, root)
-                print("ID ", id, " ADDED TO THE LEFT")
-            else:
-                print("ID ", id, " WAS NOT ADDED TO THE LEFT")
-        else:
-            root.left = Node(depth, id, root)
-            print("ID ", id, " ADDED TO THE LEFT")
-
-        my_dict[root.id] = True
-        result = find_first_overlap(truth_t, list(my_dict.values()))
-        print("MY_DICT: ", my_dict)
-        print("RESULT: ", result)
-        if result is not None:
-            if result[-1] is True:
-                root.right = Node(depth, id, root)
-                print("ID ", id, " ADDED TO THE RIGHT")
-            else:
-                print("ID ", id, " WAS NOT ADDED TO THE RIGHT")
-        else:
-            root.right = Node(depth, id, root)
-            print("ID ", id, " ADDED TO THE RIGHT")
-        return
-    elif level > 1:
-        if root.left is not None:
-            print("ROOT NOWL:", root.id)
-            my_dict[root.id] = False
-            print("MY_DICT: ", my_dict)
-            insertCurrentLevel(root.left, level - 1, depth, id, my_dict, truth_t)
-        if root.right is not None:
-            print("ROOT NOWR:", root.id)
-            my_dict[root.id] = True
-            print("MY_DICT: ", my_dict)
-            insertCurrentLevel(root.right, level - 1, depth, id, my_dict, truth_t)
-'''
-
-'''
-# Print nodes at a current level
-def insertCurrentLevel(root, level, depth, id, my_dict, truth_t, arr):
-    print("ARR: ", arr)
-    if root is not False:
-        print("LEVEL: ", level, "ID: ", id, "ROOT_ID: ", root.id)
-    if level == 1:
-        if root is not False:
-            if root.left is not False:
-                root.left = Node(depth, id, root)
-                print("ID ", id, " ADDED TO THE LEFT")
-
-                my_dict[root.id], my_dict[id] = False, False
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                print("MY_DICT: ", my_dict)
-                print("MY_DICT_VAL: ", my_dict_values)
-                print("RESULT: ", result)
-                if result is not None:
-                    if result[-1] is False:
-                        root.left.left = False
-                        print("  LL False")
-                print()
-
-                my_dict[root.id], my_dict[id] = False, True
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                print("MY_DICT: ", my_dict)
-                print("MY_DICT_VAL: ", my_dict_values)
-                print("RESULT: ", result)
-                if result is not None:
-                    if result[-1] is False:
-                        root.left.right = False
-                        print("  LR False")
-
-                print()
-        if root is not False:
-            if root.right is not False:
-                root.right = Node(depth, id, root)
-                print("ID ", id, " ADDED TO THE RIGHT")
-
-                my_dict[root.id], my_dict[id] = True, False
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                print("MY_DICT: ", my_dict)
-                print("MY_DICT_VAL: ", my_dict_values)
-                print("RESULT: ", result)
-                if result is not None:
-                    if result[-1] is False:
-                        root.right.left = False
-                        print("  RL False")
-
-                print()
-
-                my_dict[root.id], my_dict[id] = True, True
-                my_dict_values = [my_dict[key] for key in arr if key in my_dict]
-                result = find_first_overlap(truth_t, my_dict_values)
-                print("MY_DICT: ", my_dict)
-                print("MY_DICT_VAL: ", my_dict_values)
-                print("RESULT: ", result)
-                if result is not None:
-                    if result[-1] is False:
-                        root.right.right = False
-                        print("  RR False")
-
-                print()
-    elif level > 1:
-        if root is not False:
-            if root.left is not None:
-                print("ROOT NOWL:", root.id)
-                my_dict[root.id] = False
-                print("MY_DICT: ", my_dict)
-                print()
-                insertCurrentLevel(root.left, level - 1, depth, id, my_dict, truth_t, arr)
-        if root is not False:
-            if root.right is not None:
-                print("ROOT NOWR:", root.id)
-                my_dict[root.id] = True
-                print("MY_DICT: ", my_dict)
-                print()
-                insertCurrentLevel(root.right, level - 1, depth, id, my_dict, truth_t, arr)
-'''
-
-'''
-def insertAtLastLevel(root, id, my_dict, truth_t, arr, lenr):
-    h = height(root) #lnr
-    print("HEIGHT: ", h)
-    insertCurrentLevel(root, h, h, id, my_dict, truth_t, arr)
-'''
-
-'''
-for arr in selected_elements[:2]:
-    arr = list(Counter(arr).keys())
-    for i in range(len(arr)):
-        if arr[i] not in repeated:
-            if root is None:
-                root = Node(1, arr[i], None)
-            else:
-                insertAtLastLevel(root, arr[i], selected_truth_t)
-            repeated.append(arr[i])
-        else:
-            continue
-'''
+    return truth_tables
